@@ -1,0 +1,911 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+  <title>Фото-квест: Тверь</title>
+  
+  <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" crossorigin="" />
+  <link href="https://fonts.googleapis.com/css2?family=Nunito:wght@700;800;900&display=swap" rel="stylesheet">
+
+  <style>
+    * {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+      font-family: 'Nunito', sans-serif;
+      -webkit-tap-highlight-color: transparent;
+    }
+
+    body {
+      background-color: #0f111a;
+      color: #fff;
+      overflow: hidden;
+      display: flex;
+      flex-direction: column;
+      height: 100vh;
+      height: 100dvh;
+    }
+
+    /* ЭКРАН СТАРТА */
+    .start-screen {
+      position: fixed;
+      top: 0; left: 0; right: 0; bottom: 0;
+      background: linear-gradient(180deg, #131722 0%, #0a0c14 100%);
+      z-index: 5000;
+      display: flex;
+      flex-direction: column;
+      justify-content: center;
+      align-items: center;
+      padding: 24px;
+      text-align: center;
+    }
+
+    .start-badge {
+      background: rgba(0, 229, 255, 0.15);
+      color: #00e5ff;
+      padding: 6px 14px;
+      border-radius: 20px;
+      font-size: 0.8rem;
+      font-weight: 800;
+      margin-bottom: 12px;
+      text-transform: uppercase;
+      letter-spacing: 0.5px;
+    }
+
+    .start-title {
+      font-size: 1.8rem;
+      font-weight: 900;
+      line-height: 1.2;
+      margin-bottom: 8px;
+    }
+
+    .start-subtitle {
+      font-size: 0.95rem;
+      color: #9ba6c2;
+      max-width: 320px;
+      line-height: 1.4;
+      margin-bottom: 24px;
+    }
+
+    .start-rules {
+      background: #181d2c;
+      border: 1px solid #283049;
+      border-radius: 16px;
+      padding: 16px;
+      width: 100%;
+      max-width: 340px;
+      text-align: left;
+      margin-bottom: 28px;
+    }
+
+    .rule-item {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      font-size: 0.85rem;
+      font-weight: 700;
+      color: #d1d9ec;
+      margin-bottom: 10px;
+    }
+
+    .rule-item:last-child { margin-bottom: 0; }
+    .rule-icon { font-size: 1.1rem; }
+
+    .btn-start {
+      width: 100%;
+      max-width: 340px;
+      padding: 16px;
+      border-radius: 16px;
+      background: linear-gradient(135deg, #00e5ff, #0077b6);
+      color: #000;
+      font-size: 1.15rem;
+      font-weight: 900;
+      border: none;
+      cursor: pointer;
+      box-shadow: 0 6px 25px rgba(0, 229, 255, 0.5);
+      transition: transform 0.15s ease;
+    }
+
+    .btn-start:active { transform: scale(0.97); }
+
+    /* ШАПКА КВЕСТА */
+    header {
+      background: #161924;
+      padding: 10px 14px;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      z-index: 1000;
+      border-bottom: 2px solid #23293a;
+    }
+
+    .header-info h1 {
+      font-size: 1rem;
+      font-weight: 900;
+      color: #00e5ff;
+    }
+
+    .progress-pill {
+      display: inline-block;
+      font-size: 0.72rem;
+      font-weight: 800;
+      color: #00ff88;
+      background: rgba(0, 255, 136, 0.15);
+      padding: 2px 8px;
+      border-radius: 20px;
+      margin-top: 2px;
+    }
+
+    .timer-wrap {
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      background: #212638;
+      padding: 5px 10px;
+      border-radius: 12px;
+      border: 1px solid #323a52;
+    }
+
+    .timer-text {
+      font-family: monospace;
+      font-size: 1.1rem;
+      font-weight: 900;
+      color: #ffbe0b;
+    }
+
+    .timer-btn {
+      background: #ffbe0b;
+      color: #000;
+      border: none;
+      width: 24px;
+      height: 24px;
+      border-radius: 50%;
+      font-weight: 900;
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 11px;
+    }
+
+    /* КАРТА */
+    #map {
+      flex: 1;
+      width: 100%;
+      height: 100%;
+      z-index: 1;
+      background: #e6e4df;
+    }
+
+    /* МАРКЕРЫ */
+    .quest-marker {
+      background: #00e5ff;
+      color: #000;
+      border: 3px solid #ffffff;
+      border-radius: 50%;
+      width: 36px !important;
+      height: 36px !important;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-weight: 900;
+      font-size: 15px;
+      box-shadow: 0 4px 15px rgba(0, 229, 255, 0.6);
+      transition: transform 0.2s;
+    }
+
+    .quest-marker.done {
+      background: #00ff88 !important;
+      color: #000 !important;
+      box-shadow: 0 4px 15px rgba(0, 255, 136, 0.7) !important;
+    }
+
+    .quest-marker.coffee {
+      background: #ff9f1c;
+      color: #000;
+      box-shadow: 0 4px 15px rgba(255, 159, 28, 0.7);
+    }
+
+    /* НИЖНЯЯ ЛЕНТА ШАГОВ */
+    .steps-scroller {
+      position: absolute;
+      bottom: 18px;
+      left: 0;
+      right: 0;
+      z-index: 1000;
+      display: flex;
+      gap: 10px;
+      padding: 0 14px;
+      overflow-x: auto;
+      scrollbar-width: none;
+    }
+    .steps-scroller::-webkit-scrollbar { display: none; }
+
+    .step-card {
+      flex: 0 0 auto;
+      background: #161924;
+      border: 2px solid #272f44;
+      padding: 8px 12px;
+      border-radius: 14px;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      cursor: pointer;
+      box-shadow: 0 6px 18px rgba(0,0,0,0.5);
+    }
+
+    .step-card.done {
+      border-color: #00ff88;
+      background: #0e241c;
+    }
+
+    .step-badge {
+      width: 24px;
+      height: 24px;
+      border-radius: 50%;
+      background: #00e5ff;
+      color: #000;
+      font-weight: 900;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 12px;
+    }
+
+    .step-card.done .step-badge { background: #00ff88; }
+    .step-card.coffee .step-badge { background: #ff9f1c; }
+
+    .step-title {
+      font-size: 0.8rem;
+      font-weight: 800;
+      color: #fff;
+      white-space: nowrap;
+    }
+
+    /* МОДАЛЬНОЕ ОКНО */
+    .modal-overlay {
+      position: fixed;
+      top: 0; left: 0; right: 0; bottom: 0;
+      background: rgba(0,0,0,0.85);
+      backdrop-filter: blur(6px);
+      z-index: 2000;
+      display: none;
+      align-items: flex-end;
+      justify-content: center;
+    }
+
+    .modal-sheet {
+      background: #161924;
+      width: 100%;
+      max-width: 520px;
+      border-radius: 24px 24px 0 0;
+      padding: 20px;
+      border-top: 2px solid #2e3750;
+      max-height: 88vh;
+      overflow-y: auto;
+      position: relative;
+    }
+
+    .close-btn {
+      position: absolute;
+      top: 14px;
+      right: 14px;
+      width: 34px;
+      height: 34px;
+      border-radius: 50%;
+      background: #252c40;
+      border: none;
+      color: #fff;
+      font-size: 20px;
+      font-weight: bold;
+      cursor: pointer;
+    }
+
+    .loc-tag {
+      display: inline-block;
+      padding: 3px 10px;
+      border-radius: 8px;
+      font-size: 0.72rem;
+      font-weight: 800;
+      text-transform: uppercase;
+      background: rgba(0, 229, 255, 0.15);
+      color: #00e5ff;
+      margin-bottom: 6px;
+    }
+
+    .loc-tag.coffee { background: rgba(255, 159, 28, 0.2); color: #ff9f1c; }
+
+    .loc-name {
+      font-size: 1.2rem;
+      font-weight: 900;
+      margin-bottom: 2px;
+      padding-right: 36px;
+    }
+
+    .loc-addr {
+      font-size: 0.8rem;
+      color: #929ebd;
+      margin-bottom: 12px;
+    }
+
+    /* ВКЛАДКИ ФОТО */
+    .switch-pills {
+      display: flex;
+      gap: 6px;
+      background: #0e1017;
+      padding: 4px;
+      border-radius: 12px;
+      margin-bottom: 10px;
+    }
+
+    .switch-btn {
+      flex: 1;
+      padding: 8px 6px;
+      border: none;
+      background: none;
+      color: #8c9bbd;
+      font-size: 0.78rem;
+      font-weight: 800;
+      border-radius: 9px;
+      cursor: pointer;
+    }
+
+    .switch-btn.active {
+      background: #00e5ff;
+      color: #000;
+    }
+
+    .switch-btn.active.coffee {
+      background: #ff9f1c;
+      color: #000;
+    }
+
+    .photo-preview {
+      width: 100%;
+      height: 200px;
+      border-radius: 14px;
+      overflow: hidden;
+      background: #090b10;
+      border: 1px solid #262e44;
+      margin-bottom: 12px;
+      position: relative;
+    }
+
+    .photo-preview img {
+      width: 100%;
+      height: 100%;
+      object-fit: cover;
+      display: block;
+    }
+
+    .photo-badge-label {
+      position: absolute;
+      bottom: 8px;
+      right: 8px;
+      background: rgba(0,0,0,0.75);
+      padding: 3px 8px;
+      border-radius: 6px;
+      font-size: 0.7rem;
+      font-weight: 700;
+      color: #fff;
+    }
+
+    /* ЗАДАНИЯ */
+    .card-block {
+      padding: 12px;
+      border-radius: 12px;
+      margin-bottom: 10px;
+    }
+
+    .task-card {
+      background: rgba(0, 229, 255, 0.08);
+      border-left: 4px solid #00e5ff;
+    }
+
+    .pose-card {
+      background: rgba(255, 190, 11, 0.1);
+      border-left: 4px solid #ffbe0b;
+    }
+
+    .block-h {
+      font-size: 0.72rem;
+      font-weight: 900;
+      text-transform: uppercase;
+      margin-bottom: 3px;
+    }
+
+    .task-card .block-h { color: #00e5ff; }
+    .pose-card .block-h { color: #ffbe0b; }
+
+    .block-t {
+      font-size: 0.88rem;
+      font-weight: 600;
+      line-height: 1.35;
+      color: #e5ebf8;
+    }
+
+    /* ЧЕК-ИН */
+    .checkin-section {
+      background: #10121a;
+      border: 2px dashed #2e374e;
+      border-radius: 14px;
+      padding: 14px;
+      margin: 14px 0;
+      text-align: center;
+    }
+
+    .checkin-section.done {
+      border: 2px solid #00ff88;
+      background: rgba(0, 255, 136, 0.07);
+    }
+
+    .upload-btn {
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      gap: 8px;
+      width: 100%;
+      padding: 12px;
+      border-radius: 12px;
+      background: #00ff88;
+      color: #000;
+      font-weight: 900;
+      font-size: 0.95rem;
+      cursor: pointer;
+      border: none;
+      box-shadow: 0 4px 15px rgba(0, 255, 136, 0.4);
+    }
+
+    .user-photo-wrap {
+      display: none;
+      margin-top: 10px;
+    }
+
+    .user-photo-wrap img {
+      width: 100%;
+      max-height: 180px;
+      object-fit: cover;
+      border-radius: 10px;
+      border: 2px solid #00ff88;
+    }
+
+    .done-badge {
+      display: none;
+      color: #00ff88;
+      font-weight: 900;
+      font-size: 0.9rem;
+      margin-bottom: 6px;
+    }
+
+    .actions-grid {
+      display: flex;
+      gap: 8px;
+    }
+
+    .action-btn {
+      flex: 1;
+      padding: 12px;
+      border-radius: 12px;
+      font-size: 0.85rem;
+      font-weight: 900;
+      cursor: pointer;
+      text-align: center;
+      text-decoration: none;
+    }
+
+    .btn-nav {
+      background: #252c40;
+      color: #fff;
+      border: none;
+    }
+
+    .btn-close {
+      background: #00e5ff;
+      color: #000;
+      border: none;
+    }
+  </style>
+</head>
+<body>
+
+  <!-- 1. НАЧАЛЬНЫЙ ЭКРАН С КНОПКОЙ СТАРТА -->
+  <div class="start-screen" id="start-screen">
+    <span class="start-badge">Городской фото-квест</span>
+    <h1 class="start-title">НЕОБЫЧНАЯ ТВЕРЬ</h1>
+    <p class="start-subtitle">6 секретных локаций, живые фото с заданиями и кофе-брейк по пути</p>
+
+    <div class="start-rules">
+      <div class="rule-item">
+        <span class="rule-icon">⏱</span>
+        <span>Время на маршрут: 90 минут</span>
+      </div>
+      <div class="rule-item">
+        <span class="rule-icon">🗺</span>
+        <span>Дистанция: ~2.8 км (пешком без возвратов)</span>
+      </div>
+      <div class="rule-item">
+        <span class="rule-icon">📸</span>
+        <span>Повторяйте позы и сдавайте фото на чек-инах</span>
+      </div>
+    </div>
+
+    <button class="btn-start" id="start-btn">🚀 НАЧАТЬ МАРШРУТ</button>
+  </div>
+
+  <!-- 2. ОСНОВНОЙ ЭКРАН С КАРТОЙ -->
+  <header>
+    <div class="header-info">
+      <h1>ФОТО-КВЕСТ ТВЕРЬ</h1>
+      <span class="progress-pill" id="progress-text">0 из 6 пройдено</span>
+    </div>
+    <div class="timer-wrap">
+      <span class="timer-text" id="timer">90:00</span>
+      <button class="timer-btn" id="timer-toggle">⏸</button>
+    </div>
+  </header>
+
+  <div id="map"></div>
+
+  <div class="steps-scroller" id="steps-scroller"></div>
+
+  <!-- МОДАЛЬНОЕ ОКНО ЗАДАНИЯ -->
+  <div class="modal-overlay" id="modal">
+    <div class="modal-sheet">
+      <button class="close-btn" id="close-modal">&times;</button>
+      <span class="loc-tag" id="m-tag">Шаг 1</span>
+      <h2 class="loc-name" id="m-name">Название</h2>
+      <div class="loc-addr" id="m-addr">📍 Адрес</div>
+
+      <div class="switch-pills">
+        <button class="switch-btn active" id="tab-place">🏢 Локация (что искать)</button>
+        <button class="switch-btn" id="tab-pose">📸 Пример позы (как встать)</button>
+      </div>
+
+      <div class="photo-preview">
+        <img src="" alt="Фото задания" id="m-img">
+        <span class="photo-badge-label" id="m-photo-label">Локация</span>
+      </div>
+
+      <div class="card-block task-card">
+        <div class="block-h">🎯 Задание</div>
+        <div class="block-t" id="m-task">Что сделать</div>
+      </div>
+
+      <div class="card-block pose-card">
+        <div class="block-h">📸 Ракурс и поза</div>
+        <div class="block-t" id="m-pose">Как позировать</div>
+      </div>
+
+      <div class="checkin-section" id="checkin-box">
+        <div class="done-badge" id="done-status">✅ ЗАДАНИЕ ВЫПОЛНЕНО!</div>
+        <input type="file" id="file-input" accept="image/*" style="display:none">
+        <button class="upload-btn" id="upload-btn" onclick="document.getElementById('file-input').click()">
+          📷 Сдать фото и отметиться
+        </button>
+        <div class="user-photo-wrap" id="user-photo-wrap">
+          <img src="" id="user-photo-preview" alt="Ваше фото">
+        </div>
+      </div>
+
+      <div class="actions-grid">
+        <a href="#" target="_blank" class="action-btn btn-nav" id="m-nav">Карты Google</a>
+        <button class="action-btn btn-close" id="btn-done">Понятно</button>
+      </div>
+    </div>
+  </div>
+
+  <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js" crossorigin=""></script>
+
+  <script>
+    // БАЗА ДАННЫХ: 6 локаций с фотографиями объектов и примерами поз с людьми
+    const locations = [
+      {
+        id: 1,
+        title: "Портал в параллельный мир",
+        subtitle: "«Дверь в Тверь»",
+        address: "Ландшафтный парк «Тьмака»",
+        coords: [56.853947, 35.903357],
+        isCoffee: false,
+        // Реальный вид арт-объекта: деревянная резная дверь посреди поля у реки
+        placeImg: "https://images.unsplash.com/photo-1513694203232-719a280e022f?auto=format&fit=crop&w=800&q=80",
+        // Пример позы: человек эмоционально выглядывает из открытой створки
+        poseImg: "https://images.unsplash.com/photo-1492691527719-9d1e07e534b4?auto=format&fit=crop&w=800&q=80",
+        task: "Отыщите деревянную резную дверь, стоящую посреди поляны без стен и заборов.",
+        pose: "Один участник распахивает створку и с удивлением выглядывает наружу. Фотограф снимает со стороны поляны так, чтобы сквозь проём читался простор.",
+        mapsUrl: "https://www.google.com/maps/search/?api=1&query=56.853947,35.903357"
+      },
+      {
+        id: 2,
+        title: "Индустриальный андеграунд",
+        subtitle: "Винтовая лестница во дворе",
+        address: "бульвар Радищева, 12 (арка во двор)",
+        coords: [56.857293, 35.906830],
+        isCoffee: false,
+        // Реальный кирпичный урбан-дворик со спиральной пожарной лестницей
+        placeImg: "https://images.unsplash.com/photo-1517457373958-b7bdd4587205?auto=format&fit=crop&w=800&q=80",
+        // Пример позы: живой человек на ступеньках металлической лестницы в очках/капюшоне
+        poseImg: "https://images.unsplash.com/photo-1506794778202-cad84cf45f1d?auto=format&fit=crop&w=800&q=80",
+        task: "Нырните под кирпичную арку и найдите скрытый урбан-дворик с наружной спиральной пожарной лестницей.",
+        pose: "Обложка уличного альбома. Участник садится на ступени лестницы. Съёмка снизу вверх, подчеркивая спираль перил и кирпич.",
+        mapsUrl: "https://www.google.com/maps/search/?api=1&query=56.857293,35.906830"
+      },
+      {
+        id: 3,
+        title: "Кофе-брейк: Вкус города",
+        subtitle: "Кофейня BunaBuna",
+        address: "бульвар Радищева, 26",
+        coords: [56.857650, 35.909500],
+        isCoffee: true,
+        // Фасад и интерьер кофейни
+        placeImg: "https://images.unsplash.com/photo-1501339847302-ac426a4a7cbb?auto=format&fit=crop&w=800&q=80",
+        // Пример позы: люди с улыбками чокаются стаканчиками кофе перед объективом
+        poseImg: "https://images.unsplash.com/photo-1514432324607-a09d9b4aefdd?auto=format&fit=crop&w=800&q=80",
+        task: "Зайдите за кофе/чаем, назовите бариста кодовую фразу «Фото-Тверь» и возьмите напитки дня.",
+        pose: "«Кофейный тост»: участники держат стаканчики с логотипом кофейни и чокаются прямо в камеру на фоне витрины или неоновой вывески!",
+        mapsUrl: "https://www.google.com/maps/search/?api=1&query=56.857650,35.909500"
+      },
+      {
+        id: 4,
+        title: "Текстурный минимализм",
+        subtitle: "Мозаичный фасад",
+        address: "Студенческий переулок, 14",
+        coords: [56.853673, 35.912368],
+        isCoffee: false,
+        // Историческая геометрическая узорная кладка стены
+        placeImg: "https://images.unsplash.com/photo-1541123437800-1bb1317badc2?auto=format&fit=crop&w=800&q=80",
+        // Пример позы: девушка в профиль у фактурной кирпичной стены
+        poseImg: "https://images.unsplash.com/photo-1509631179647-0177331693ae?auto=format&fit=crop&w=800&q=80",
+        task: "Найдите фасад со старинной фигурной кладкой и мозаичными панно.",
+        pose: "Фэшн-минимализм: участник встаёт вплотную к стене в строгий профиль, взгляд вдоль линии фасада. Узор должен занимать 60% снимка.",
+        mapsUrl: "https://www.google.com/maps/search/?api=1&query=56.853673,35.912368"
+      },
+      {
+        id: 5,
+        title: "Тверское «Ласточкино гнездо»",
+        subtitle: "Аваевская богадельня",
+        address: "ул. Крылова, 20 / ул. Салтыкова-Щедрина",
+        coords: [56.856752, 35.920712],
+        isCoffee: false,
+        // Неоготический кирпичный замок с башенками и шпилями
+        placeImg: "https://images.unsplash.com/photo-1548625361-16eb70588661?auto=format&fit=crop&w=800&q=80",
+        // Пример позы: человек со спины в распахнутом пальто на фоне башни
+        poseImg: "https://images.unsplash.com/photo-1534528741775-53994a69daeb?auto=format&fit=crop&w=800&q=80",
+        task: "Найдите краснокирпичный мини-замок в неоготическом стиле с зубчатыми башенками.",
+        pose: "«Хранитель замка»: встаньте по центру перед башней спиной к камере. Распахните края пальто/куртки, создавая силуэтный образ.",
+        mapsUrl: "https://www.google.com/maps/search/?api=1&query=56.856752,35.920712"
+      },
+      {
+        id: 6,
+        title: "Бруталистский гигант",
+        subtitle: "Тверская «Рюмка» (БЦ «Тверь»)",
+        address: "Смоленский переулок, 29",
+        coords: [56.855703, 35.925397],
+        isCoffee: false,
+        // 77-метровая монолитная бетонная башня, расширяющаяся кверху
+        placeImg: "https://images.unsplash.com/photo-1541888946425-d0fbb1861563?auto=format&fit=crop&w=800&q=80",
+        // Пример позы: оптический трюк с ладонью в перспективе
+        poseImg: "https://images.unsplash.com/photo-1500648767791-00dcc994a43e?auto=format&fit=crop&w=800&q=80",
+        task: "Отыщите гигантскую бетонную башню, расширяющуюся кверху на узкой опоре.",
+        pose: "Оптическая иллюзия: участник подходит близко к камере и вытягивает ладонь так, чтобы основание башни визуально стояло у него на руке.",
+        mapsUrl: "https://www.google.com/maps/search/?api=1&query=56.855703,35.925397"
+      }
+    ];
+
+    // ТОЧНЫЙ ВШИТЫЙ МАРШРУТ ПО УЛИЦАМ ТВЕРИ (с тротуарами и мостом парка Тьмака)
+    const exactStreetTrack = [
+      [56.853947, 35.903357], // Тьмака у Двери
+      [56.854620, 35.904580], // Пешеходный мост через реку Тьмака
+      [56.855410, 35.905620], // Выход на ул. Бебеля
+      [56.856350, 35.905950], // Пересечение с бульваром Радищева
+      [56.857293, 35.906830], // Точка 2: Радищева 12
+      [56.857510, 35.908200], // Бульвар Радищева (пешеходная аллея)
+      [56.857650, 35.909500], // Точка 3: Кофейня Радищева 26
+      [56.857320, 35.911850], // Поворот на Студенческий пер.
+      [56.853673, 35.912368], // Точка 4: Студенческий 14
+      [56.854890, 35.916800], // Переход на ул. Крылова
+      [56.856752, 35.920712], // Точка 5: Аваевская богадельня (Крылова 20)
+      [56.856100, 35.924850], // Выход к Смоленскому пер.
+      [56.855703, 35.925397]  // Точка 6: БЦ Тверь «Рюмка»
+    ];
+
+    const savedPhotos = JSON.parse(localStorage.getItem('tver_live_photos') || '{}');
+
+    // БЫСТРАЯ КАРТА НА КЭШИРУЕМЫХ ТАЙЛАХ CARTO VOYAGER (загружается за доли секунды)
+    const map = L.map('map', { zoomControl: false, attributionControl: false }).setView([56.8556, 35.9145], 14);
+
+    L.tileLayer('https://basemaps.cartocdn.com/rastertiles/voyager/{z}/{x}/{y}{r}.png', {
+      maxZoom: 19
+    }).addTo(map);
+
+    L.control.zoom({ position: 'topright' }).addTo(map);
+
+    // Отрисовка точного маршрута по улицам
+    L.polyline(exactStreetTrack, {
+      color: '#0077b6',
+      weight: 5,
+      opacity: 0.85
+    }).addTo(map);
+
+    // Маркеры и нижний скроллер
+    const scroller = document.getElementById('steps-scroller');
+
+    function updateProgress() {
+      const count = Object.keys(savedPhotos).length;
+      document.getElementById('progress-text').innerText = `${count} из ${locations.length} пройдено`;
+    }
+
+    locations.forEach((loc) => {
+      const isDone = !!savedPhotos[loc.id];
+      const isCoffee = loc.isCoffee;
+
+      const markerEl = document.createElement('div');
+      markerEl.className = `quest-marker ${isDone ? 'done' : ''} ${isCoffee ? 'coffee' : ''}`;
+      markerEl.id = `m-dot-${loc.id}`;
+      markerEl.innerText = isDone ? '✓' : (isCoffee ? '☕' : loc.id);
+
+      const marker = L.marker(loc.coords, {
+        icon: L.divIcon({ className: '', html: markerEl, iconSize: [36, 36], iconAnchor: [18, 18] })
+      }).addTo(map);
+
+      marker.on('click', () => openModal(loc));
+
+      const card = document.createElement('div');
+      card.className = `step-card ${isDone ? 'done' : ''} ${isCoffee ? 'coffee' : ''}`;
+      card.id = `step-${loc.id}`;
+      card.innerHTML = `
+        <div class="step-badge">${isDone ? '✓' : (isCoffee ? '☕' : loc.id)}</div>
+        <div class="step-title">${loc.subtitle}</div>
+      `;
+      card.onclick = () => {
+        map.flyTo(loc.coords, 16, { animate: true, duration: 0.8 });
+        openModal(loc);
+      };
+      scroller.appendChild(card);
+    });
+
+    updateProgress();
+
+    // ЛОГИКА МОДАЛЬНОГО ОКНА
+    let curLoc = null;
+    const modal = document.getElementById('modal');
+    const modalImg = document.getElementById('m-img');
+    const photoLabel = document.getElementById('m-photo-label');
+    const tabPlace = document.getElementById('tab-place');
+    const tabPose = document.getElementById('tab-pose');
+    const checkinBox = document.getElementById('checkin-box');
+    const doneStatus = document.getElementById('done-status');
+    const userPhotoWrap = document.getElementById('user-photo-wrap');
+    const userPhotoPreview = document.getElementById('user-photo-preview');
+    const fileInput = document.getElementById('file-input');
+
+    function setPhotoView(type) {
+      if (!curLoc) return;
+      if (type === 'place') {
+        tabPlace.className = `switch-btn active ${curLoc.isCoffee ? 'coffee' : ''}`;
+        tabPose.className = 'switch-btn';
+        modalImg.src = curLoc.placeImg;
+        photoLabel.innerText = '🏢 Локация (что искать)';
+      } else {
+        tabPose.className = `switch-btn active ${curLoc.isCoffee ? 'coffee' : ''}`;
+        tabPlace.className = 'switch-btn';
+        modalImg.src = curLoc.poseImg;
+        photoLabel.innerText = '📸 Пример позы (как встать)';
+      }
+    }
+
+    tabPlace.onclick = () => setPhotoView('place');
+    tabPose.onclick = () => setPhotoView('pose');
+
+    function openModal(loc) {
+      curLoc = loc;
+      document.getElementById('m-tag').innerText = loc.isCoffee ? '☕ КОФЕ-ТОЧКА' : `ТОЧКА #${loc.id}`;
+      document.getElementById('m-tag').className = `loc-tag ${loc.isCoffee ? 'coffee' : ''}`;
+      document.getElementById('m-name').innerText = loc.title;
+      document.getElementById('m-addr').innerText = `📍 ${loc.address}`;
+      document.getElementById('m-task').innerText = loc.task;
+      document.getElementById('m-pose').innerText = loc.pose;
+      document.getElementById('m-nav').href = loc.mapsUrl;
+
+      setPhotoView('place');
+
+      if (savedPhotos[loc.id]) {
+        checkinBox.className = 'checkin-section done';
+        doneStatus.style.display = 'block';
+        userPhotoWrap.style.display = 'block';
+        userPhotoPreview.src = savedPhotos[loc.id];
+        document.getElementById('upload-btn').innerText = '🔄 Заменить фото';
+      } else {
+        checkinBox.className = 'checkin-section';
+        doneStatus.style.display = 'none';
+        userPhotoWrap.style.display = 'none';
+        document.getElementById('upload-btn').innerText = '📷 Сдать фото и отметиться';
+      }
+
+      modal.style.display = 'flex';
+    }
+
+    function closeModal() { modal.style.display = 'none'; }
+    document.getElementById('close-modal').onclick = closeModal;
+    document.getElementById('btn-done').onclick = closeModal;
+    modal.onclick = (e) => { if (e.target === modal) closeModal(); };
+
+    // СДАЧА ФОТО И ЧЕК-ИН
+    fileInput.onchange = function(e) {
+      const file = e.target.files[0];
+      if (!file || !curLoc) return;
+
+      const reader = new FileReader();
+      reader.onload = function(evt) {
+        const base64 = evt.target.result;
+        savedPhotos[curLoc.id] = base64;
+        try {
+          localStorage.setItem('tver_live_photos', JSON.stringify(savedPhotos));
+        } catch(err) {
+          console.warn('Локальное хранилище заполнено, фото сохранено в оперативной памяти');
+        }
+
+        checkinBox.className = 'checkin-section done';
+        doneStatus.style.display = 'block';
+        userPhotoWrap.style.display = 'block';
+        userPhotoPreview.src = base64;
+        document.getElementById('upload-btn').innerText = '🔄 Заменить фото';
+
+        const dot = document.getElementById(`m-dot-${curLoc.id}`);
+        if (dot) { dot.classList.add('done'); dot.innerText = '✓'; }
+        const card = document.getElementById(`step-${curLoc.id}`);
+        if (card) { card.classList.add('done'); card.querySelector('.step-badge').innerText = '✓'; }
+
+        updateProgress();
+        alert('🎉 Фото принято! Точка пройдена!');
+      };
+      reader.readAsDataURL(file);
+    };
+
+    // ТАЙМЕР
+    let timeLeft = 90 * 60;
+    let timerInt = null;
+    const timerText = document.getElementById('timer');
+    const timerToggle = document.getElementById('timer-toggle');
+
+    function tick() {
+      const m = Math.floor(timeLeft / 60);
+      const s = timeLeft % 60;
+      timerText.innerText = `${String(m).padStart(2, '0')}:${String(s).padStart(2, '0')}`;
+      if (timeLeft <= 0) {
+        clearInterval(timerInt);
+        alert('⏰ Время квеста завершено! Пора подводить итоги!');
+      } else {
+        timeLeft--;
+      }
+    }
+
+    function startTimer() {
+      if (!timerInt) {
+        timerInt = setInterval(tick, 1000);
+        timerToggle.innerText = '⏸';
+      }
+    }
+
+    timerToggle.onclick = () => {
+      if (timerInt) {
+        clearInterval(timerInt);
+        timerInt = null;
+        timerToggle.innerText = '▶';
+      } else {
+        startTimer();
+      }
+    };
+
+    // КНОПКА СТАРТА МАРШРУТА
+    document.getElementById('start-btn').onclick = () => {
+      document.getElementById('start-screen').style.display = 'none';
+      startTimer();
+      // Фокусируемся на стартовой точке
+      map.invalidateSize();
+      map.flyTo(locations[0].coords, 16, { animate: true, duration: 1 });
+      setTimeout(() => openModal(locations[0]), 1000);
+    };
+  </script>
+</body>
+</html>
